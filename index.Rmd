@@ -9,20 +9,166 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+```{r libraries, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(caret)
+```
 
-This is an R Markdown document. 
+```{r, echo=FALSE}
+setwd("F:/Coursera/DataScience - Johns Hopkins University/08_MachineLearning/Project/practicalMachineLearning")
+memory.limit(16194)
+set.seed(1977)
+```
 
-```{r cars}
+
+## Introduction
+
+This project uses *Weight Lifting Exercises Dataset* to develop and test a human activity recognition/prediction model. In particular, the goal of this project is to recognise/predict the manner in which the wearers of a set of body sensors did the weight lifting exercise. It will process the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who performed barbell lifts correctly and incorrectly in 5 different ways.
+
+According to the [documentation](http://groupware.les.inf.puc-rio.br/har#dataset), six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions:
+
+* exactly according to the specification (Class A),
+* throwing the elbows to the front (Class B),
+* lifting the dumbbell only halfway (Class C),
+* lowering the dumbbell only halfway (Class D) and 
+* throwing the hips to the front (Class E).
+
+The final objective of the project is to corectly predict 20 different test cases. 
+
+## Data Cleaning/Preprocessing
+The data provided for project consists of two sets - a __*training*__ set and __*testing*__ set. The __*training*__ dataset will be used for choosing a learning model and a prediction using the chosen model will be done for the 20 cases in the __*testing*__ dataset. 
+
+Reading the data in:
+```{r prepocessing}
+training <- read.csv("Data/pml-training.csv", na.strings = c("NA", "", "#DIV/0!"))
+testing <- read.csv("Data/pml-testing.csv", na.strings = c("NA", "", "#DIV/0!"))
+```
+The datasets contain a large numbers of missing values for many variables, whcih are coded as "NA", "", or "#DIV/0!". Therefore, the first step in the clening process was correctly labeling all the missing data points using the `read.csv()` function.
+
+Next, such variables as `X`, `user_name`, `raw_timestamp_part_1`, `raw_timestamp_part_2`, `cvtd_timestamp`, `new_window`, `num_window` contain no data that have value for recognition/prediction purpose, so these varibles are deleted from the dataset. Also, data many variables in the following list contain 19216 to 19622 NA values (almost entirely missing!), so the variables will also be removed:
+```{r}
+sapply(X=training, FUN = function(d){sum(is.na(d))}) %>% sort(decreasing = T)
+```
+
+Cleaning both datasets:
+```{r}
+
+data_clean <- function(dat){
+    
+    dat <- subset(dat, select = -c(X, 
+                                   user_name,
+                                   raw_timestamp_part_1,
+                                   raw_timestamp_part_2,
+                                   cvtd_timestamp,
+                                   new_window,
+                                   num_window))  
+    dat <- dat[,sapply(X=dat, FUN = function(d){sum(is.na(d))}) == 0]
+    return(dat)
+}
+
+
+training <- data_clean(training)
+testing <- data_clean(testing)
+```
+
+## Data Slicing
+To effectively choose a learning model for the task, it is necessary to be able to estimate the model's accuracy based on its out-of-sample error rate. Therefore, it is important to split the original __*training*__ dataset into *training* and *testing* subsets and use the *training* subset for learning and *testing* subset for estimating the lerner's accuracy. 
+
+The following splits the available __*training*__ data into two subsets so that 75% of the cases become part of the *train* subset and 25% become part of the *test* subset:
+```{r slicing}
+indexTrain <- createDataPartition(y = training$classe, p=0.75, list = FALSE)
+train <- training[indexTrain,]
+test <- training[-indexTrain,]
+```
+
+
+## Predicting
+The following is the distribution of the outcome variable, which is at a 5-level nominal scale and does not appear to have any extreme abnormalities to additionally address: 
+```{r, fig.align='center'}
+training %>% ggplot(aes(x=classe)) + geom_bar() + labs(title = "Distribution of the Outcome: the Unilateral Dumbbell Biceps Curl in five different fashions")
+```
+
+The rest of the variables are either numeric or integer:
+```{r}
+sapply(train, class) %>% sort() 
+```
+
+For the nominal-level outcome, it is appropriate to classification rather than regression learners. Therefore, for the purposes of this project the following classification models will be considered:
+
+* Classification Trees (CART model)
+* Random Forest (rf) 
+* Boosting (gbm)
+
+The method based on classification trees is relatively simple and must be fast in classifying the training dataset with 14718 observations. At the same time, it might demonstrate low accuracy. On the other handthe latter two methods are among the most accurate existing learners but also require significant computational power. 
+
+### Classification Trees | CART
+
+```{r cart, cache=TRUE}
+mFit_cart <- train(classe ~ ., method = "rpart", data = train)
+print(mFit_cart)
+print(mFit_cart$finalModel)
+```
+
+Out-of-sample accuracy:
+```{r}
+predicted_cart <- predict(mFit_cart, test)
+accuracyRate <- function(predicted, values){ sum((predicted==values)*1)/sum(length(values)) }
+accuracyRate(predicted_cart, test$classe)
+```
+The accuracy of this model is just above 50%, which is too low to be acceptable. 
+
+
+### Random Forest
+```{r rf, , cache=TRUE}
+mFit_rf <- train(classe ~ ., method = "rf", data = train, trControl = trainControl(method="cv"), number=3)
+mFit_rf
+```
+
+Out-of-sample accuracy:
+```{r}
+predicted_rf <- predict(mFit_rf, test)              
+accuracyRate(predicted_rf, test$classe)
+```
+
+### Boosting
+```{r boost, cache=TRUE, warning=FALSE}
+mFit_boost <- train(classe ~ ., data = train, method = "gbm", verbose=FALSE)
+mFit_boost
+```
+
+Out-of-sample accuracy:
+```{r}
+predicted_boost <- predict(mFit_boost, test)          
+accuracyRate(predicted_boost, test$classe)
+```
+
+## Prediction for the Project 20 Test Cases
+Prediction for the 20 test cases using the Decision Tree model:
+```{r}
+predicted_cart_testing <- predict(mFit_cart, testing)
+predicted_cart_testing
 
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
+Prediction for the 20 test cases using the Random Forest model:
+```{r }
+predicted_rf_testing <- predict(mFit_rf, testing)   #Prediction for 20-obs. quiz dataset 
+predicted_rf_testing
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Prediction for the 20 test cases using the Boosting model:
+```{r}
+predicted_boost_testing <- predict(mFit_boost, testing)  #Prediction for 20-obs. quiz dataset 
+predicted_boost_testing
+
+```
+
+Finally, the following check the agreement accuracy between the Random Forest and Boosting methods:
+```{r}
+sum(predicted_rf_testing==predicted_boost_testing)
+```
+
+As we can see, the last two methods - Boosting and Random Forest appear to be 96.9 and 99.6 percent accurate and agree with each other in their prediction of all of the 20 test cases.
+
