@@ -17,9 +17,6 @@ library(caret)
 ```
 
 
-```
-## [1] 16194
-```
 
 
 ## Introduction
@@ -254,10 +251,10 @@ sapply(train, class) %>% sort()
 For the nominal-level outcome, it is appropriate to classification rather than regression learners. Therefore, for the purposes of this project the following classification models will be considered:
 
 * Classification Trees (CART model)
-* Random Forest (rf) 
+* Random Forest (rf) with 10-fold cross-validation  
 * Boosting (gbm)
 
-The method based on classification trees is relatively simple and must be fast in classifying the training dataset with 14718 observations. At the same time, it might demonstrate low accuracy. On the other handthe latter two methods are among the most accurate existing learners but also require significant computational power. 
+The method based on classification trees is relatively simple and must be fast in classifying the training dataset with 14718 observations. At the same time, it might demonstrate low accuracy. On the other hand, the latter two methods are among the most accurate existing learners and expected to demonstrate high accuracy but also require significant computational power and may take a long time to run. 
 
 ### Classification Trees | CART
 
@@ -326,7 +323,7 @@ The accuracy of this model is just above 50%, which is too low to be acceptable.
 ### Random Forest
 
 ```r
-mFit_rf <- train(classe ~ ., method = "rf", data = train, trControl = trainControl(method="cv"), number=3)
+mFit_rf <- train(classe ~ ., method = "rf", data = train, trControl = trainControl(method="cv", number=10))
 mFit_rf
 ```
 
@@ -423,6 +420,7 @@ predicted_cart_testing
 ##  [1] C A C A A C C A A A C C C A C A A A A C
 ## Levels: A B C D E
 ```
+Since the accuracy of this method is lower than necessary, the predictions above will not be conidered. 
 
 Prediction for the 20 test cases using the Random Forest model:
 
@@ -458,5 +456,5 @@ sum(predicted_rf_testing==predicted_boost_testing)
 ## [1] 20
 ```
 
-As we can see, the last two methods - Boosting and Random Forest appear to be 96.9 and 99.6 percent accurate and agree with each other in their prediction of all of the 20 test cases.
+As we can see, the last two methods - Boosting and Random Forest appear to be highly  (96.9 and 99.6 percent) accurate and agree with each other in their prediction of all of the 20 test cases.
 

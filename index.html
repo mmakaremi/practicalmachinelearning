@@ -132,7 +132,6 @@ $(document).ready(function () {
 <pre class="r"><code>library(dplyr)
 library(ggplot2)
 library(caret)</code></pre>
-<pre><code>## [1] 16194</code></pre>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
 <p>This project uses <em>Weight Lifting Exercises Dataset</em> to develop and test a human activity recognition/prediction model. In particular, the goal of this project is to recognise/predict the manner in which the wearers of a set of body sensors did the weight lifting exercise. It will process the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who performed barbell lifts correctly and incorrectly in 5 different ways.</p>
@@ -335,10 +334,11 @@ test &lt;- training[-indexTrain,]</code></pre>
 <p>For the nominal-level outcome, it is appropriate to classification rather than regression learners. Therefore, for the purposes of this project the following classification models will be considered:</p>
 <ul>
 <li>Classification Trees (CART model)</li>
-<li>Random Forest (rf)</li>
+<li>Random Forest (rf) with 10-fold cross-validation<br />
+</li>
 <li>Boosting (gbm)</li>
 </ul>
-<p>The method based on classification trees is relatively simple and must be fast in classifying the training dataset with 14718 observations. At the same time, it might demonstrate low accuracy. On the other handthe latter two methods are among the most accurate existing learners but also require significant computational power.</p>
+<p>The method based on classification trees is relatively simple and must be fast in classifying the training dataset with 14718 observations. At the same time, it might demonstrate low accuracy. On the other hand, the latter two methods are among the most accurate existing learners and expected to demonstrate high accuracy but also require significant computational power and may take a long time to run.</p>
 <div id="classification-trees-cart" class="section level3">
 <h3>Classification Trees | CART</h3>
 <pre class="r"><code>mFit_cart &lt;- train(classe ~ ., method = &quot;rpart&quot;, data = train)
@@ -385,7 +385,7 @@ accuracyRate(predicted_cart, test$classe)</code></pre>
 </div>
 <div id="random-forest" class="section level3">
 <h3>Random Forest</h3>
-<pre class="r"><code>mFit_rf &lt;- train(classe ~ ., method = &quot;rf&quot;, data = train, trControl = trainControl(method=&quot;cv&quot;), number=3)
+<pre class="r"><code>mFit_rf &lt;- train(classe ~ ., method = &quot;rf&quot;, data = train, trControl = trainControl(method=&quot;cv&quot;, number=10))
 mFit_rf</code></pre>
 <pre><code>## Random Forest 
 ## 
@@ -455,6 +455,7 @@ accuracyRate(predicted_boost, test$classe)</code></pre>
 predicted_cart_testing</code></pre>
 <pre><code>##  [1] C A C A A C C A A A C C C A C A A A A C
 ## Levels: A B C D E</code></pre>
+<p>Since the accuracy of this method is lower than necessary, the predictions above will not be conidered.</p>
 <p>Prediction for the 20 test cases using the Random Forest model:</p>
 <pre class="r"><code>predicted_rf_testing &lt;- predict(mFit_rf, testing)   #Prediction for 20-obs. quiz dataset 
 predicted_rf_testing</code></pre>
@@ -468,7 +469,7 @@ predicted_boost_testing</code></pre>
 <p>Finally, the following check the agreement accuracy between the Random Forest and Boosting methods:</p>
 <pre class="r"><code>sum(predicted_rf_testing==predicted_boost_testing)</code></pre>
 <pre><code>## [1] 20</code></pre>
-<p>As we can see, the last two methods - Boosting and Random Forest appear to be 96.9 and 99.6 percent accurate and agree with each other in their prediction of all of the 20 test cases.</p>
+<p>As we can see, the last two methods - Boosting and Random Forest appear to be highly (96.9 and 99.6 percent) accurate and agree with each other in their prediction of all of the 20 test cases.</p>
 </div>
 
 
